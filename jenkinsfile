@@ -35,6 +35,40 @@ pipeline {
                 sh "npm test"
             }
         }
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: 'dist/**'
+            }
+        }
+        stage("publish artifact"){
+            steps{
+                withCredentials([usernamePassword(credentialsId: 'nexus', passwordVariable: 'nexus-pass', usernameVariable: 'nexus-user')]){
+                    script {
+
+                        def nexusRegistry = 'http://54.247.201.131:8081/repository/npmrepo/'
+
+                        if (isUnix()) {
+                            sh """
+                              cat <<EOF > .npmrc
+                              registry=${nexusRegistry}
+                              always-auth=true
+                              _auth=\$(echo -n "\${nexus-user}:\${nexus-pass}" | base64)
+                              EOF
+                              npm publish
+                              rm .npmrc
+                            """
+                        } else {
+                            bat """
+                              echo registry=${nexusRegistry} >> .npmrc
+                              echo always-auth=true >> .npmrc
+                              echo _auth=%nexus-user%:%nexus-pass% | base64 /d >> .npmrc
+                              npm publish
+                              del .npmrc
+                            """
+                        }
+                }
+            }
+        }
     }
 }
 
