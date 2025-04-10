@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    tools {
+        // Install the Maven version configured as "M3" and add it to the path.
+        nodejs  "NODEJS"
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                // Get some code from a GitHub repository
+                git branch: 'main', url: 'https://github.com/pratyu-J/jenkins_demo_node.git'
+
+                // Run Maven on a Unix agent.
+                sh "npm install"
+
+                // To run Maven on a Windows agent, use
+                // bat "mvn -Dmaven.test.failure.ignore=true clean package"
+            }     
+        }
+
+        stage("install Dependencies"){
+            steps{
+                sh "npm install"
+            }
+        }
+        stage("build project"){
+            steps{
+                sh "npm run build"
+            }
+        }
+        stage("run test"){
+            steps{
+                sh "npm test"
+            }
+        }
+    }
+}
+
+
+// post {
+            //     // If Maven was able to run the tests, even if some of the test
+            //     // failed, record the test results and archive the jar file.
+            //     success {
+            //         echo "success"
+            //         // junit '**/target/surefire-reports/TEST-*.xml'
+            //         // archiveArtifacts 'target/*.jar'
+            //     }
+            // }
