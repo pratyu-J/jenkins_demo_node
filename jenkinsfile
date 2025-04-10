@@ -57,8 +57,8 @@ pipeline {
         }
         stage("build project"){
             steps{
-                sh "npm version patch"
-                sh "npm run build"
+                sh "npm version patch" //bumps up the project veriosn
+                sh "npm run build" //builds the application
             }
         }
         stage('Archive Artifacts') {
@@ -66,7 +66,7 @@ pipeline {
                 archiveArtifacts artifacts: 'dist/**'
             }
         }
-        stage('publish'){
+        stage('publish'){ // to nexus repo
             steps{
                 sh 'npm publish'
                 sh 'rm .npmrc'
