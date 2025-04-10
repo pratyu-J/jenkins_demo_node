@@ -35,9 +35,9 @@ pipeline {
                         def registryHost = nexusRegistry.replace('http://', '')
                         def authToken = sh(script: 'echo -n "${nexususer}:${nexuspass}" | base64', returnStdout: true).trim()
                         
-                        sh "echo ${nexusRegistry}"
-                        sh "echo ${params.NEXUS_HOST}"
-                        sh "echo ${params.NEXUS_REPO_NAME}"
+                        // sh "echo ${nexusRegistry}"
+                        // sh "echo ${params.NEXUS_HOST}"
+                        // sh "echo ${params.NEXUS_REPO_NAME}"
 
                         sh """
                           echo "registry=${nexusRegistry}" > .npmrc
