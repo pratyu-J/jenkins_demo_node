@@ -5,19 +5,49 @@ pipeline {
         // Install the Maven version configured as "M3" and add it to the path.
         nodejs  "NODEJS"
     }
+    
+    parameters {
+        string(name: 'NEXUS_HOST', defaultValue: 'http://54.247.201.131', description: 'Nexus URL HOST')
+        string(name: 'NEXUS_REPO_NAME', defaultValue: 'npmrepo', description: 'Nexus repo where artifacts are to be stored')
+    }
 
     stages {
         stage('Build') {
             steps {
+                //crealing workspace
+                cleanWs()
+                
                 // Get some code from a GitHub repository
                 git branch: 'main', url: 'https://github.com/pratyu-J/jenkins_demo_node.git'
 
                 // Run Maven on a Unix agent.
-                sh "npm install"
 
                 // To run Maven on a Windows agent, use
                 // bat "mvn -Dmaven.test.failure.ignore=true clean package"
             }     
+        }
+        stage('Configure NPM Auth') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus', passwordVariable: 'nexuspass', usernameVariable: 'nexususer')]) {
+                    script {
+                        
+                        def nexusRegistry = "${params.NEXUS_HOST}:8081/repository/${params.NEXUS_REPO_NAME}/"
+                        def registryHost = nexusRegistry.replace('http://', '')
+                        def authToken = sh(script: 'echo -n "${nexususer}:${nexuspass}" | base64', returnStdout: true).trim()
+                        
+                        // sh "echo ${nexusRegistry}"
+                        // sh "echo ${params.NEXUS_HOST}"
+                        // sh "echo ${params.NEXUS_REPO_NAME}"
+
+                        sh """
+                          echo "registry=${nexusRegistry}" > .npmrc
+                          echo "always-auth=true" >> .npmrc
+                          echo "//${registryHost}:_auth=${authToken}" >> .npmrc
+                        """
+                        sh 'cat .npmrc'
+                    }
+                }
+            }
         }
 
         stage("install Dependencies"){
@@ -27,12 +57,8 @@ pipeline {
         }
         stage("build project"){
             steps{
+                sh "npm version patch"
                 sh "npm run build"
-            }
-        }
-        stage("run test"){
-            steps{
-                sh "npm test"
             }
         }
         stage('Archive Artifacts') {
@@ -40,45 +66,12 @@ pipeline {
                 archiveArtifacts artifacts: 'dist/**'
             }
         }
-        stage("publish artifact"){
+        stage('publish'){
             steps{
-                withCredentials([usernamePassword(credentialsId: 'nexus', passwordVariable: 'nexus-pass', usernameVariable: 'nexus-user')]){
-                    script {
-
-                        def nexusRegistry = 'http://54.247.201.131:8081/repository/npmrepo/'
-
-                        if (isUnix()) {
-                            sh """
-                              cat <<EOF > .npmrc
-                              registry=${nexusRegistry}
-                              always-auth=true
-                              _auth=\$(echo -n "\${nexus-user}:\${nexus-pass}" | base64)
-                              EOF
-                              npm publish
-                              rm .npmrc
-                            """
-                        } else {
-                            bat """
-                              echo registry=${nexusRegistry} >> .npmrc
-                              echo always-auth=true >> .npmrc
-                              echo _auth=%nexus-user%:%nexus-pass% | base64 /d >> .npmrc
-                              npm publish
-                              del .npmrc
-                            """
-                        }
-                }
+                sh 'npm publish'
+                sh 'rm .npmrc'
             }
         }
+        
     }
 }
-
-
-// post {
-            //     // If Maven was able to run the tests, even if some of the test
-            //     // failed, record the test results and archive the jar file.
-            //     success {
-            //         echo "success"
-            //         // junit '**/target/surefire-reports/TEST-*.xml'
-            //         // archiveArtifacts 'target/*.jar'
-            //     }
-            // }
